@@ -73,8 +73,9 @@ namespace PokemonAR.Core
             if (restartButtonGameOver != null) restartButtonGameOver.onClick.AddListener(OnRestartPressed);
         }
 
-        private void OnEnable()
+private void OnEnable()
         {
+            // Subscribe defensively — GameManager may or may not exist yet
             if (GameManager.Instance != null)
                 GameManager.Instance.OnStateChanged += HandleStateChanged;
         }
@@ -85,13 +86,33 @@ namespace PokemonAR.Core
                 GameManager.Instance.OnStateChanged -= HandleStateChanged;
         }
 
-        private void Start()
+private void Start()
         {
+            // Re-subscribe here so we never miss it even if OnEnable fired too early.
+            // Remove first to prevent double-subscription if OnEnable already ran.
             if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnStateChanged -= HandleStateChanged;
+                GameManager.Instance.OnStateChanged += HandleStateChanged;
                 HandleStateChanged(GameManager.Instance.CurrentState);
+            }
             else
+            {
                 ShowOnly(mainMenuPanel);
+                // Poll until GameManager initialises (handles DontDestroyOnLoad ordering edge cases)
+                StartCoroutine(WaitForGameManager());
+            }
         }
+
+private System.Collections.IEnumerator WaitForGameManager()
+        {
+            while (GameManager.Instance == null)
+                yield return null;
+            GameManager.Instance.OnStateChanged -= HandleStateChanged;
+            GameManager.Instance.OnStateChanged += HandleStateChanged;
+            HandleStateChanged(GameManager.Instance.CurrentState);
+        }
+
 
         // ── State → panel ─────────────────────────────────────────────────────
         private void HandleStateChanged(GameState newState)
