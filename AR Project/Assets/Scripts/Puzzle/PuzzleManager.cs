@@ -19,7 +19,7 @@ namespace PokemonAR.Puzzle
         [Header("Behavior")]
         [SerializeField] private float wrongFlashDurationSeconds = 0.5f;
         [SerializeField] private bool lockInputWhenSolved = true;
-        [SerializeField] private bool autoCompletePuzzlePhase = false;
+        [SerializeField] private float delayBeforeTransition = 1.5f;
         [SerializeField] private bool completeOnAnyTap = false;
 
         [Header("Scoring")]
@@ -55,7 +55,6 @@ namespace PokemonAR.Puzzle
 
         private void Start()
         {
-            EnsureRuntimeHudExists();
             NotifyProgress();
         }
 
@@ -162,10 +161,17 @@ namespace PokemonAR.Puzzle
             _isComplete = true;
             if (lockInputWhenSolved) _inputLocked = true;
 
+            Debug.Log("[PuzzleManager] Puzzle solved! Firing onPuzzleCompleted and handing off to PuzzleController.");
             onPuzzleCompleted?.Invoke();
 
-            if (autoCompletePuzzlePhase)
-                PuzzleController.Instance?.CompletePhase();
+            // Always advance to Collection — give the player a moment to see the solved state.
+            StartCoroutine(DelayedComplete());
+        }
+
+        private IEnumerator DelayedComplete()
+        {
+            yield return new WaitForSeconds(delayBeforeTransition);
+            PuzzleController.Instance?.CompletePhase();
         }
 
         private void NotifyProgress() => onProgressChanged?.Invoke(_currentIndex, correctSequence?.Count ?? 0);
@@ -179,13 +185,6 @@ namespace PokemonAR.Puzzle
                 GameManager.Instance?.AddScore(delta);
 
             onScoreChanged?.Invoke(_score);
-        }
-
-        private void EnsureRuntimeHudExists()
-        {
-            if (FindObjectOfType<PuzzleRuntimeHUD>() != null) return;
-            var hud = new GameObject("PuzzleRuntimeHUD");
-            hud.AddComponent<PuzzleRuntimeHUD>();
         }
     }
 }

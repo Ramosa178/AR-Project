@@ -1,23 +1,22 @@
+using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;   // covers both Button and Text — no extra packages needed
+using UnityEngine.UI;
 
 namespace PokemonAR.Core
 {
     // =========================================================================
-    //  UIStateManager  (Part 1 — Core Systems & Game Manager)
+    //  UIStateManager
     //
-    //  Uses standard UnityEngine.UI.Text — no TextMeshPro required.
+    //  One HUD root with two sub-groups that swap visibility per scene:
+    //    PuzzleHUD     — Score, Progress (1/3), Wrong attempts
+    //    CollectionHUD — Pokeballs, Collected count
     //
-    //  SETUP IN INSPECTOR:
-    //    1. Add this script to the Canvas GameObject in Main.unity
-    //    2. Drag each Panel into its matching slot
-    //    3. Drag the two Text objects (score / pokeball) into their slots
-    //    4. Drag Start and Restart buttons into the button slots
+    //  All labels poll GameManager every frame while active — no events needed.
     // =========================================================================
     public class UIStateManager : MonoBehaviour
     {
         // ── Panels ────────────────────────────────────────────────────────────
-        [Header("Panels — one per GameState, assign in Inspector")]
+        [Header("Panels")]
         [SerializeField] private GameObject mainMenuPanel;
         [SerializeField] private GameObject puzzlePanel;
         [SerializeField] private GameObject collectionPanel;
@@ -25,45 +24,33 @@ namespace PokemonAR.Core
         [SerializeField] private GameObject gameEndPanel;
         [SerializeField] private GameObject gameOverPanel;
 
-        // ── HUD ───────────────────────────────────────────────────────────────
-        [Header("HUD — visible during Puzzle / Collection / Battle")]
+        // ── HUD root ──────────────────────────────────────────────────────────
+        [Header("HUD Root")]
         [SerializeField] private GameObject hudRoot;
-        [SerializeField] private Text       scoreLabel;       // UI > Text
-        [SerializeField] private Text       pokeballLabel;    // UI > Text
+
+        // ── Puzzle HUD group ──────────────────────────────────────────────────
+        [Header("Puzzle HUD")]
+        [SerializeField] private GameObject puzzleHUD;
+        [SerializeField] private Text puzzleScoreLabel;     // "Score: 0"
+        [SerializeField] private Text puzzleProgressLabel;  // "Progress: 1/3"
+        [SerializeField] private Text puzzleWrongLabel;     // "Wrong: 0"
+
+        // ── Collection HUD group ──────────────────────────────────────────────
+        [Header("Collection HUD")]
+        [SerializeField] private GameObject collectionHUD;
+        [SerializeField] private Text pokeballLabel;        // "Pokeballs: 3"
+        [SerializeField] private Text collectedLabel;       // "Collected: 2"
+
+        // ── Result labels ─────────────────────────────────────────────────────
+        [Header("Result Labels (optional)")]
+        [SerializeField] private Text finalScoreLabel;
+        [SerializeField] private Text gameOverScoreLabel;
 
         // ── Buttons ───────────────────────────────────────────────────────────
         [Header("Buttons")]
         [SerializeField] private Button startButton;
         [SerializeField] private Button restartButtonGameEnd;
         [SerializeField] private Button restartButtonGameOver;
-
-        // ── Result screen labels ───────────────────────────────────────────────
-        [Header("Result screen labels (optional)")]
-        [SerializeField] private Text finalScoreLabel;      // inside GameEndPanel
-        [SerializeField] private Text gameOverScoreLabel;   // inside GameOverPanel
-
-
-        // =========================================================================
-        //  PART 2 NOTE — Puzzle UI
-        //  Add your puzzle UI children (number grid, feedback overlays, timer)
-        //  inside the PuzzlePanel GameObject in the Hierarchy.
-        //  This script handles showing/hiding the panel — you don't touch that.
-        // =========================================================================
-
-        // =========================================================================
-        //  PART 3 NOTE — Collection UI
-        //  Add your timer or ball-count display as children of CollectionPanel.
-        //  The HUD already shows PokeballCount live — no extra counter needed
-        //  unless you want a different visual style.
-        // =========================================================================
-
-        // =========================================================================
-        //  PART 4 NOTE — Battle UI
-        //  Add your boss HP bar, throw button, Pokémon selector etc. as children
-        //  of BattlePanel. The HUD tracks Score and PokeballCount automatically.
-        //  GameEndPanel and GameOverPanel display the final score automatically.
-        // =========================================================================
-
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
         private void Awake()
@@ -73,23 +60,8 @@ namespace PokemonAR.Core
             if (restartButtonGameOver != null) restartButtonGameOver.onClick.AddListener(OnRestartPressed);
         }
 
-private void OnEnable()
+        private void Start()
         {
-            // Subscribe defensively — GameManager may or may not exist yet
-            if (GameManager.Instance != null)
-                GameManager.Instance.OnStateChanged += HandleStateChanged;
-        }
-
-        private void OnDisable()
-        {
-            if (GameManager.Instance != null)
-                GameManager.Instance.OnStateChanged -= HandleStateChanged;
-        }
-
-private void Start()
-        {
-            // Re-subscribe here so we never miss it even if OnEnable fired too early.
-            // Remove first to prevent double-subscription if OnEnable already ran.
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.OnStateChanged -= HandleStateChanged;
@@ -99,22 +71,26 @@ private void Start()
             else
             {
                 ShowOnly(mainMenuPanel);
-                // Poll until GameManager initialises (handles DontDestroyOnLoad ordering edge cases)
+                SetHUDVisible(false);
                 StartCoroutine(WaitForGameManager());
             }
         }
 
-private System.Collections.IEnumerator WaitForGameManager()
+        private void OnDisable()
         {
-            while (GameManager.Instance == null)
-                yield return null;
+            if (GameManager.Instance != null)
+                GameManager.Instance.OnStateChanged -= HandleStateChanged;
+        }
+
+        private IEnumerator WaitForGameManager()
+        {
+            while (GameManager.Instance == null) yield return null;
             GameManager.Instance.OnStateChanged -= HandleStateChanged;
             GameManager.Instance.OnStateChanged += HandleStateChanged;
             HandleStateChanged(GameManager.Instance.CurrentState);
         }
 
-
-        // ── State → panel ─────────────────────────────────────────────────────
+        // ── State → panel + HUD group ─────────────────────────────────────────
         private void HandleStateChanged(GameState newState)
         {
             switch (newState)
@@ -123,23 +99,32 @@ private System.Collections.IEnumerator WaitForGameManager()
                     ShowOnly(mainMenuPanel);
                     SetHUDVisible(false);
                     break;
+
                 case GameState.Puzzle:
                     ShowOnly(puzzlePanel);
                     SetHUDVisible(true);
+                    SetHUDGroup(showPuzzle: true);
                     break;
+
                 case GameState.Collection:
                     ShowOnly(collectionPanel);
                     SetHUDVisible(true);
+                    SetHUDGroup(showPuzzle: false);
                     break;
+
                 case GameState.Battle:
                     ShowOnly(battlePanel);
                     SetHUDVisible(true);
+                    // Battle teammate can add their own HUD group here
+                    SetHUDGroup(showPuzzle: false);
                     break;
+
                 case GameState.GameEnd:
                     ShowOnly(gameEndPanel);
                     SetHUDVisible(false);
                     RefreshFinalScore(finalScoreLabel);
                     break;
+
                 case GameState.GameOver:
                     ShowOnly(gameOverPanel);
                     SetHUDVisible(false);
@@ -148,24 +133,25 @@ private System.Collections.IEnumerator WaitForGameManager()
             }
         }
 
-        // ── HUD live refresh ──────────────────────────────────────────────────
+        // ── Live label refresh ────────────────────────────────────────────────
         private void Update()
         {
             if (GameManager.Instance == null) return;
 
             GameState s = GameManager.Instance.CurrentState;
-            bool active = s == GameState.Puzzle ||
-                          s == GameState.Collection ||
-                          s == GameState.Battle;
-            if (!active) return;
 
-            if (scoreLabel    != null) scoreLabel.text    = "Score: "     + GameManager.Instance.Score;
-            if (pokeballLabel != null) pokeballLabel.text = "Pokeballs: " + GameManager.Instance.PokeballCount;
+            if (s == GameState.Puzzle)
+            {
+                if (puzzleScoreLabel    != null) puzzleScoreLabel.text    = "Score: "    + GameManager.Instance.Score;
+                if (puzzleProgressLabel != null) puzzleProgressLabel.text = "Progress: " + GetPuzzleProgress();
+                if (puzzleWrongLabel    != null) puzzleWrongLabel.text    = "Wrong: "    + GetWrongAttempts();
+            }
+            else if (s == GameState.Collection || s == GameState.Battle)
+            {
+                if (pokeballLabel  != null) pokeballLabel.text  = "Pokeballs: " + GameManager.Instance.PokeballCount;
+                if (collectedLabel != null) collectedLabel.text = "Score: "     + GameManager.Instance.Score;
+            }
         }
-
-        // ── Button callbacks ──────────────────────────────────────────────────
-        private void OnStartPressed()   => GameManager.Instance?.StartGame();
-        private void OnRestartPressed() => GameManager.Instance?.RestartGame();
 
         // ── Helpers ───────────────────────────────────────────────────────────
         private void ShowOnly(GameObject target)
@@ -178,13 +164,39 @@ private System.Collections.IEnumerator WaitForGameManager()
             SetActive(gameOverPanel,   gameOverPanel   == target);
         }
 
-        private void SetHUDVisible(bool v)              { if (hudRoot != null) hudRoot.SetActive(v); }
-        private void SetActive(GameObject go, bool v)   { if (go != null) go.SetActive(v); }
+        private void SetHUDVisible(bool v)
+        {
+            if (hudRoot != null) hudRoot.SetActive(v);
+        }
+
+        private void SetHUDGroup(bool showPuzzle)
+        {
+            SetActive(puzzleHUD,     showPuzzle);
+            SetActive(collectionHUD, !showPuzzle);
+        }
+
+        private void SetActive(GameObject go, bool v) { if (go != null) go.SetActive(v); }
 
         private void RefreshFinalScore(Text label)
         {
             if (label != null && GameManager.Instance != null)
                 label.text = "Final Score: " + GameManager.Instance.Score;
         }
+
+        // Pull live data from PuzzleManager if it's in the scene
+        private string GetPuzzleProgress()
+        {
+            var pm = FindObjectOfType<Puzzle.PuzzleManager>();
+            return pm != null ? $"{pm.CurrentIndex}/{pm.SequenceLength}" : "0/0";
+        }
+
+        private int GetWrongAttempts()
+        {
+            var pm = FindObjectOfType<Puzzle.PuzzleManager>();
+            return pm != null ? pm.WrongAttempts : 0;
+        }
+
+        private void OnStartPressed()   => GameManager.Instance?.StartGame();
+        private void OnRestartPressed() => GameManager.Instance?.RestartGame();
     }
 }

@@ -35,13 +35,31 @@ namespace PokemonAR.Core
         private string _activePhaseScene = null;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
-        private void OnEnable()
+private void OnEnable() { /* intentionally empty — subscription happens in Start after all Awake() calls */ }
+
+private void Start()
         {
             if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnStateChanged -= OnStateChanged;
                 GameManager.Instance.OnStateChanged += OnStateChanged;
+                Debug.Log("[SceneLoader] Subscribed to GameManager.");
+            }
             else
-                Debug.LogError("[SceneLoader] GameManager.Instance is null — make sure GameManager exists in Main.unity.");
+            {
+                Debug.LogWarning("[SceneLoader] GameManager not ready — starting poll.");
+                StartCoroutine(WaitAndSubscribe());
+            }
         }
+
+        private System.Collections.IEnumerator WaitAndSubscribe()
+        {
+            while (GameManager.Instance == null) yield return null;
+            GameManager.Instance.OnStateChanged -= OnStateChanged;
+            GameManager.Instance.OnStateChanged += OnStateChanged;
+            Debug.Log("[SceneLoader] Subscribed to GameManager (delayed).");
+        }
+
 
         private void OnDisable()
         {
