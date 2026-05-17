@@ -5,65 +5,106 @@ using UnityEngine.XR.ARSubsystems;
 
 namespace PokemonAR.Collection
 {
+    // Listens to ARTrackedImageManager and spawns/despawns pokeball prefabs
+    // on top of each detected image marker.
+    //
+    // The trackedImageManager field is auto-resolved via GetComponent if not
+    // assigned in the Inspector -- no manual wiring required.
     public class PokeballSpawner : MonoBehaviour
     {
         [SerializeField] private GameObject pokeballPrefab;
+
+        [Tooltip("Leave null -- auto-found via GetComponent on the same GameObject.")]
         [SerializeField] private ARTrackedImageManager trackedImageManager;
 
-        private Dictionary<TrackableId, GameObject> _spawnedBalls = new();
+        private readonly Dictionary<TrackableId, GameObject> _spawnedBalls = new();
+
+        private void Awake()
+        {
+            if (trackedImageManager == null)
+                trackedImageManager = GetComponent<ARTrackedImageManager>();
+
+            if (trackedImageManager == null)
+                Debug.LogError("[PokeballSpawner] ARTrackedImageManager not found! " +
+                               "Add it to the same GameObject (XR Origin) or assign it in the Inspector.");
+        }
 
         private void OnEnable()
         {
-            trackedImageManager.trackablesChanged.AddListener(OnTrackedImagesChanged);
+            if (trackedImageManager != null)
+                trackedImageManager.trackedImagesChanged += OnTrackedImagesChanged;
         }
 
         private void OnDisable()
         {
-            trackedImageManager.trackablesChanged.RemoveListener(OnTrackedImagesChanged);
+            if (trackedImageManager != null)
+                trackedImageManager.trackedImagesChanged -= OnTrackedImagesChanged;
         }
 
-        private void OnTrackedImagesChanged(ARTrackablesChangedEventArgs<ARTrackedImage> args)
+        private void OnTrackedImagesChanged(ARTrackedImagesChangedEventArgs args)
         {
-            // New marker detected — spawn pokeball
-            foreach (var trackedImage in args.added)
+            foreach (ARTrackedImage added in args.added)
+                HandleImage(added);
+
+            foreach (ARTrackedImage updated in args.updated)
+                HandleImage(updated);
+
+            foreach (ARTrackedImage removed in args.removed)
+                HandleRemoved(removed);
+        }
+
+        private void HandleImage(ARTrackedImage trackedImage)
+        {
+            if (trackedImage == null) return;
+
+            bool isTracking = trackedImage.trackingState == TrackingState.Tracking;
+
+            if (!_spawnedBalls.TryGetValue(trackedImage.trackableId, out GameObject ball))
             {
-                SpawnBall(trackedImage);
+                // Only spawn when actively tracked
+                if (!isTracking) return;
+
+                ball = SpawnBall(trackedImage);
+                if (ball == null) return;
+                _spawnedBalls[trackedImage.trackableId] = ball;
             }
 
-            // Marker updated — move pokeball with marker
-            foreach (var trackedImage in args.updated)
-            {
-                if (_spawnedBalls.TryGetValue(trackedImage.trackableId, out GameObject ball))
-                {
-                    bool isTracking = trackedImage.trackingState == TrackingState.Tracking;
-                    ball.SetActive(isTracking);
-                    if (isTracking)
-                        ball.transform.position = trackedImage.transform.position;
-                }
-            }
+            // Show/hide based on tracking. Position is automatic via parenting.
+            if (ball != null)
+                ball.SetActive(isTracking);
+        }
 
-            // Marker lost — hide pokeball
-            // Marker lost — hide pokeball
-            // Marker lost — hide pokeball
-            foreach (var kvp in args.removed)
+        private void HandleRemoved(ARTrackedImage trackedImage)
+        {
+            if (trackedImage == null) return;
+            if (_spawnedBalls.TryGetValue(trackedImage.trackableId, out GameObject ball))
             {
-                if (_spawnedBalls.TryGetValue(kvp.Key, out GameObject ball))
-                {
-                    Destroy(ball);
-                    _spawnedBalls.Remove(kvp.Key);
-                }
+                if (ball != null) Destroy(ball);
+                _spawnedBalls.Remove(trackedImage.trackableId);
             }
         }
 
-        private void SpawnBall(ARTrackedImage trackedImage)
+        private GameObject SpawnBall(ARTrackedImage trackedImage)
         {
-            if (pokeballPrefab == null) return;
+            if (pokeballPrefab == null)
+            {
+                Debug.LogError("[PokeballSpawner] pokeballPrefab is not assigned!");
+                return null;
+            }
 
-            GameObject ball = Instantiate(pokeballPrefab, trackedImage.transform.position, Quaternion.identity);
-            ball.transform.SetParent(trackedImage.transform);
-            _spawnedBalls[trackedImage.trackableId] = ball;
+            // Parent ball to the tracked image transform -- it follows the marker automatically.
+            // No manual position update needed in the updated loop.
+            GameObject ball = Instantiate(
+                pokeballPrefab,
+                trackedImage.transform.position,
+                Quaternion.identity,
+                trackedImage.transform);
+
+            ball.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            ball.transform.localRotation = Quaternion.identity;
 
             Debug.Log($"[PokeballSpawner] Spawned pokeball on marker: {trackedImage.referenceImage.name}");
+            return ball;
         }
     }
 }
