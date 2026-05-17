@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 848409ee8ba454f42a5ddff137688a27, type: 3}
+  m_Name: PokeballMarkerLibrary
+  m_EditorClassIdentifier: Unity.XR.ARSubsystems::UnityEngine.XR.ARSubsystems.XRReferenceImageLibrary
+  m_GuidLow: 4834568742264459336
+  m_GuidHigh: 11537912536054993306
+  m_DataStore:
+    m_Storage: []
+  m_Images:
+  - m_SerializedGuid:
+      m_GuidLow: 5732816725647716348
+      m_GuidHigh: 6462978093470494852
+    m_SerializedTextureGuid:
+      m_GuidLow: 10760466993933751632
+      m_GuidHigh: 991738011732046680
+    m_Size: {x: 0.25, y: 0.23925781}
+    m_SpecifySize: 1
+    m_Name: PokeballMarker1
+    m_Texture: {fileID: 0}
+  - m_SerializedGuid:
+      m_GuidLow: 5096989556172390353
+      m_GuidHigh: 4705704360533835432
+    m_SerializedTextureGuid:
+      m_GuidLow: 6743295239885199080
+      m_GuidHigh: 1495826660773888634
+    m_Size: {x: 0.25, y: 0.25}
+    m_SpecifySize: 1
+    m_Name: PokeballMarker2
+    m_Texture: {fileID: 0}
+  - m_SerializedGuid:
+      m_GuidLow: 5099515586144597589
+      m_GuidHigh: 9633902268684477843
+    m_SerializedTextureGuid:
+      m_GuidLow: 14412890424752904818
+      m_GuidHigh: 17538326789502675242
+    m_Size: {x: 0.25, y: 0.25215518}
+    m_SpecifySize: 1
+    m_Name: PokeballMarker3
+    m_Texture: {fileID: 0}
+  - m_SerializedGuid:
+      m_GuidLow: 5190880385746297123
+      m_GuidHigh: 653441721002837152
+    m_SerializedTextureGuid:
+      m_GuidLow: 3176229537395351108
+      m_GuidHigh: 12223329980739774235
+    m_Size: {x: 0.25, y: 0.25}
+    m_SpecifySize: 1
+    m_Name: PokeballMarker4
+    m_Texture: {fileID: 0}
+  - m_SerializedGuid:
+      m_GuidLow: 5751993438307736582
+      m_GuidHigh: 2234563701462567047
+    m_SerializedTextureGuid:
+      m_GuidLow: 14944141993542014780
+      m_GuidHigh: 7942908168414716731
+    m_Size: {x: 0.25, y: 0.24788135}
+    m_SpecifySize: 1
+    m_Name: PokeballMarker5
+    m_Texture: {fileID: 0}

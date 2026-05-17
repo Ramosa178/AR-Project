@@ -102,9 +102,10 @@ namespace PokemonAR.Core.Editor
             }
 
             // ── XR Device Simulator ───────────────────────────────────────
-            var simGO = new GameObject("XR Device Simulator");
-            simGO.AddComponent<XRDeviceSimulator>();
-
+            #if UNITY_EDITOR
+                var simGO = new GameObject("XR Device Simulator");
+                simGO.AddComponent<XRDeviceSimulator>();
+            #endif
             // ── Canvas ────────────────────────────────────────────────────
             var cvGO    = new GameObject("Canvas");
             var cv      = cvGO.AddComponent<Canvas>();
