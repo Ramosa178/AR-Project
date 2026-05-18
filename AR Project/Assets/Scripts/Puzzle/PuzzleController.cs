@@ -56,7 +56,6 @@ namespace PokemonAR.Puzzle
             if (_completed) return;
             _completed = true;
             Debug.Log("[PuzzleController] Puzzle complete — handing off to GameManager.");
-            GameManager.Instance?.CompletePhase(GameState.Puzzle);
         }
     }
 }

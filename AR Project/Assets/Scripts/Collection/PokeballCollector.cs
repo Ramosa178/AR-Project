@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.EnhancedTouch;
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
+using PokemonAR.Core;
 
 namespace PokemonAR.Collection
 {
@@ -64,7 +65,7 @@ namespace PokemonAR.Collection
         private void Collect()
         {
             Debug.Log("[PokeballCollector] Pokeball collected!");
-            CollectionController.Instance?.AddPokeball(1);
+            FindObjectOfType<SceneTransition>()?.CollectPokeball();
             Destroy(gameObject);
         }
     }

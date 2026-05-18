@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 namespace PokemonAR.Core
 {
@@ -7,8 +7,8 @@ namespace PokemonAR.Core
     {
         public static PersistentHUD Instance { get; private set; }
 
-        [SerializeField] private Text scoreText;
-        [SerializeField] private Text pokeballText;
+        [SerializeField] private TextMeshProUGUI scoreText;
+        [SerializeField] private TextMeshProUGUI pokeballText;
         [SerializeField] private GameObject hudRoot;
 
         private void Awake()

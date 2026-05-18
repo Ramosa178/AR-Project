@@ -55,7 +55,6 @@ namespace PokemonAR.Puzzle
 
         private void Start()
         {
-            EnsureRuntimeHudExists();
             NotifyProgress();
         }
 
@@ -161,11 +160,14 @@ namespace PokemonAR.Puzzle
         {
             _isComplete = true;
             if (lockInputWhenSolved) _inputLocked = true;
-
             onPuzzleCompleted?.Invoke();
+            StartCoroutine(DelayedTransition());
+        }
 
-            if (autoCompletePuzzlePhase)
-                PuzzleController.Instance?.CompletePhase();
+        private IEnumerator DelayedTransition()
+        {
+            yield return new WaitForSeconds(1.5f);
+            FindObjectOfType<SceneTransition>()?.GoToNextScene();
         }
 
         private void NotifyProgress() => onProgressChanged?.Invoke(_currentIndex, correctSequence?.Count ?? 0);
@@ -176,16 +178,8 @@ namespace PokemonAR.Puzzle
             if (clampScoreAtZero && _score < 0) _score = 0;
 
             if (syncScoreToGameManager && delta > 0)
-                GameManager.Instance?.AddScore(delta);
-
+                SimpleGameManager.Instance?.AddScore(delta);
             onScoreChanged?.Invoke(_score);
-        }
-
-        private void EnsureRuntimeHudExists()
-        {
-            if (FindObjectOfType<PuzzleRuntimeHUD>() != null) return;
-            var hud = new GameObject("PuzzleRuntimeHUD");
-            hud.AddComponent<PuzzleRuntimeHUD>();
         }
     }
 }
